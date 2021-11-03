@@ -3,14 +3,14 @@ mod worker;
 use clap::Parser;
 use scoped_threadpool::Pool;
 use std::cmp;
-use std::io::Error;
+use std::io::{Error, Read, Write};
 use std::net::TcpStream;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use worker::Worker;
 
 #[derive(Parser)]
-#[clap(version = "1.0", author = "Michael Van Leeuwen <michaeljvanleeuwen@gmail.com>")]
+#[clap(version = "1.0", author = "Michael Van Leeuwen <michaeljvanleeuwen at gmail.com>")]
 struct Slowlorust {
     /// The IP address of the webserver
     ip: String,
@@ -33,9 +33,14 @@ struct Slowlorust {
     verbose: i32,
 }
 
+/// How long does it take to GET the root?
+/// Duration if successful, else Error.
 fn benchmark_connection(conn_str: &str) -> Result<Duration, Error> {
     let now = Instant::now();
-    TcpStream::connect(&conn_str)?;
+    let mut stream = TcpStream::connect(&conn_str)?;
+    stream.write_all("GET / HTTP/1.1\r\n\r\n".as_bytes())?;
+    let mut buffer = Vec::new();
+    stream.read_to_end(&mut buffer)?;
     Ok(now.elapsed())
 }
 
@@ -47,7 +52,9 @@ fn main() {
     }
 
     let conn_str = format!("{}:{}", args.ip, args.port);
-    if benchmark_connection(&conn_str).is_err() {
+    if let Ok(dur) = benchmark_connection(&conn_str) {
+        println!("Server is up. Connected in {}s ({} ns).", dur.as_secs(), dur.as_nanos());
+    } else {
         panic!("Connection failed. Is the server up?");
     }
 
