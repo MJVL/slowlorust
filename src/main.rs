@@ -2,6 +2,7 @@ mod worker;
 
 use clap::Parser;
 use scoped_threadpool::Pool;
+use std::cmp;
 use std::io::Error;
 use std::net::TcpStream;
 use std::thread::sleep;
@@ -9,10 +10,7 @@ use std::time::{Duration, Instant};
 use worker::Worker;
 
 #[derive(Parser)]
-#[clap(
-    version = "1.0",
-    author = "Michael Van Leeuwen <michaeljvanleeuwen@gmail.com>"
-)]
+#[clap(version = "1.0", author = "Michael Van Leeuwen <michaeljvanleeuwen@gmail.com>")]
 struct Slowlorust {
     /// The IP address of the webserver
     ip: String,
@@ -58,12 +56,7 @@ fn main() {
     let mut num_workers = 0;
     pool.scoped(|scoped| {
         while num_workers < args.num_workers {
-            if let Ok(mut worker) = Worker::new(
-                num_workers,
-                conn_str.clone(),
-                (args.lower_sleep, args.upper_sleep),
-                args.verbose,
-            ) {
+            if let Ok(mut worker) = Worker::new(num_workers, conn_str.clone(), (args.lower_sleep, args.upper_sleep), args.verbose) {
                 if args.verbose > 0 {
                     println!("[slowlorust_{:03}] Spawned.", num_workers);
                 }
@@ -71,7 +64,7 @@ fn main() {
                     worker.start();
                 });
                 num_workers += 1;
-                if num_workers % (args.num_workers / 10 + 1) == 0 {
+                if num_workers % cmp::max(args.num_workers / 10, 1) == 0 {
                     println!("\t{:03} workers spawned.", num_workers);
                 }
             }
