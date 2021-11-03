@@ -28,18 +28,22 @@ struct Slowlorust {
     /// How many seconds to wait between each connection benchmark
     #[clap(short, long, default_value = "15")]
     benchmark_delay: u8,
+    /// How many seconds to wait between the server is marked as down
+    #[clap(short, long, default_value = "5")]
+    timeout: u8,
     /// Log actions of each worker
     #[clap(short, long, parse(from_occurrences))]
     verbose: i32,
 }
 
 /// How long does it take to GET the root?
-/// Duration if successful, else Error.
-fn benchmark_connection(conn_str: &str) -> Result<Duration, Error> {
+/// Duration if successful, else Error
+fn benchmark_connection(conn_str: &str, timeout: u8) -> Result<Duration, Error> {
     let now = Instant::now();
     let mut stream = TcpStream::connect(&conn_str)?;
     stream.write_all("GET / HTTP/1.1\r\n\r\n".as_bytes())?;
     let mut buffer = Vec::new();
+    stream.set_read_timeout(Some(Duration::from_secs(timeout as u64)))?;
     stream.read_to_end(&mut buffer)?;
     Ok(now.elapsed())
 }
@@ -52,7 +56,7 @@ fn main() {
     }
 
     let conn_str = format!("{}:{}", args.ip, args.port);
-    if let Ok(dur) = benchmark_connection(&conn_str) {
+    if let Ok(dur) = benchmark_connection(&conn_str, args.timeout) {
         println!("Server is up. Connected in {}s ({} ns).", dur.as_secs(), dur.as_nanos());
     } else {
         panic!("Connection failed. Is the server up?");
@@ -80,9 +84,9 @@ fn main() {
 
         println!("Starting connection benchmarking...");
         loop {
-            match benchmark_connection(&conn_str) {
-                Ok(dur) => println!("\tConnected in {}s ({} ns).", dur.as_secs(), dur.as_nanos()),
-                Err(_) => println!("\tFailed to connect."),
+            match benchmark_connection(&conn_str, args.timeout) {
+                Ok(dur) => println!("\tServer response in {}s ({} ns).", dur.as_secs(), dur.as_nanos()),
+                Err(_) => println!("\tFailed to benchmark. Is the server choking?"),
             }
             sleep(Duration::from_secs(args.benchmark_delay as u64));
         }
