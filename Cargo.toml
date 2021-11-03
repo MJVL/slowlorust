@@ -1,5 +1,5 @@
 [package]
-name = "slowdorust"
+name = "slowlorust"
 version = "0.1.0"
 authors = ["mjvl"]
 edition = "2018"
