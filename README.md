@@ -16,7 +16,7 @@ Cargo
 
 Manual
 
-`cargo install --git https://github.com/MJVL/slowlcorust`
+`cargo install --git https://github.com/MJVL/slowlorust`
 
 ## Usage
 
