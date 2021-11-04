@@ -1,10 +1,11 @@
 # slowdorust
 
-Lightweight slowloris (HTTP DoS) implementation in Rust.
+<h4 align="center">Lightweight slowloris (HTTP DoS) implementation in Rust.</h4>
+<p align="center">
+  <img src="img/demo.gif"/>
+</p>
 
 > Slowloris is a denial-of-service attack program which allows an attacker to overwhelm a targeted server by opening and maintaining many simultaneous HTTP connections between the attacker and the target. -[Cloudflare](https://www.cloudflare.com/learning/ddos/ddos-attack-tools/slowloris/)
-
-![demo](img/demo.gif)
 
 ## Installation
 
