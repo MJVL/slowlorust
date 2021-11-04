@@ -30,7 +30,7 @@ struct Slowlorust {
     /// How many seconds to wait between each connection benchmark
     #[clap(short, long, default_value = "15")]
     benchmark_delay: u8,
-    /// How many seconds to wait between the server is marked as down
+    /// How many seconds to wait before the server is "down"
     #[clap(short, long, default_value = "5")]
     timeout: u8,
     /// Log actions of each worker
@@ -38,8 +38,6 @@ struct Slowlorust {
     verbose: i32,
 }
 
-/// How long does it take to GET the root?
-/// Duration if successful, else Error
 fn benchmark_connection(conn_str: &str, timeout: u8) -> Result<Duration, Error> {
     let now = Instant::now();
     let mut stream = TcpStream::connect(&conn_str)?;
@@ -55,14 +53,16 @@ fn main() {
     colog::init();
 
     if args.lower_sleep >= args.upper_sleep {
-        panic!("Error: sleep_min must be < sleep_max.")
+        error!("sleep_min must be < sleep_max.");
+        panic!();
     }
 
     let conn_str = format!("{}:{}", args.ip, args.port);
     if let Ok(dur) = benchmark_connection(&conn_str, args.timeout) {
         info!("Server is up. Connected in {}s ({} ns).", dur.as_secs(), dur.as_nanos());
     } else {
-        panic!("Connection failed. Is the server up?");
+        error!("Connection failed. Is the server up?");
+        panic!();
     }
 
     info!("Starting workers...");
@@ -78,7 +78,7 @@ fn main() {
                     worker.start();
                 });
                 num_workers += 1;
-                if num_workers % cmp::max(args.num_workers / 10, 1) == 0 {
+                if num_workers % cmp::max(args.num_workers / 5, 1) == 0 {
                     println!(" | \t{:03} workers spawned.", num_workers);
                 }
             }
@@ -88,8 +88,8 @@ fn main() {
         info!("Starting connection benchmarking...");
         loop {
             match benchmark_connection(&conn_str, args.timeout) {
-                Ok(dur) => info!("\tServer response in {}s ({} ns).", dur.as_secs(), dur.as_nanos()),
-                Err(_) => warn!("\tFailed to benchmark. Is the server choking?"),
+                Ok(dur) => info!("Server response in {}s ({} ns).", dur.as_secs(), dur.as_nanos()),
+                Err(_) => warn!("Failed to benchmark. Is the server choking?"),
             }
             sleep(Duration::from_secs(args.benchmark_delay as u64));
         }

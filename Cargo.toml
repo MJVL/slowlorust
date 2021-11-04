@@ -1,8 +1,14 @@
 [package]
 name = "slowlorust"
 version = "0.1.0"
-authors = ["mjvl"]
+authors = ["Michael Van Leeuwen <michaeljvanleeuwen at gmail.com>"]
 edition = "2018"
+repository = "https://github.com/MJVL/slowlorust"
+description = "Lightweight slowloris (HTTP DoS) implementation in Rust."
+license = "MIT"
+categories = ["command-line-utilities"]
+keywords = ["cli", "slowloris", "dos"]
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
