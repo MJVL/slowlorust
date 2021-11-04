@@ -10,6 +10,10 @@
 
 ## Installation
 
+Cargo
+
+`cargo install slowdorust`
+
 Manual
 
 `cargo install --git https://github.com/MJVL/slowlorust`
