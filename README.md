@@ -12,7 +12,7 @@
 
 Cargo
 
-`cargo install slowdorust`
+`cargo install slowlorust`
 
 Manual
 
