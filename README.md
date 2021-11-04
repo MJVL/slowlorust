@@ -1,4 +1,4 @@
-# slowdorust
+# slowlorust
 
 <h4 align="center">Lightweight slowloris (HTTP DoS) implementation in Rust.</h4>
 <p align="center">
@@ -16,7 +16,7 @@ Cargo
 
 Manual
 
-`cargo install --git https://github.com/MJVL/slowlorust`
+`cargo install --git https://github.com/MJVL/slowlcorust`
 
 ## Usage
 
