@@ -78,7 +78,7 @@ fn main() {
                     worker.start();
                 });
                 num_workers += 1;
-                if num_workers % cmp::max(args.num_workers / 5, 1) == 0 {
+                if args.verbose == 0 && num_workers % cmp::max(args.num_workers / 5, 1) == 0 {
                     println!(" | \t{:03} workers spawned.", num_workers);
                 }
             }
