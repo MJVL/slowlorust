@@ -2,7 +2,7 @@ mod worker;
 
 use clap::Parser;
 use scoped_threadpool::Pool;
-use std::cmp;
+use std::{cmp, process};
 use std::io::{Error, Read, Write};
 use std::net::TcpStream;
 use std::thread::sleep;
@@ -57,7 +57,7 @@ fn main() {
 
     if args.lower_sleep >= args.upper_sleep {
         error!("sleep_min must be < sleep_max.");
-        panic!();
+        process::exit(1);
     }
 
     let conn_str = format!("{}:{}", args.ip, args.port);
@@ -65,7 +65,7 @@ fn main() {
         info!("Server is up. Connected in {}s ({} ns).", dur.as_secs(), dur.as_nanos());
     } else {
         error!("Connection failed. Is the server up?");
-        panic!();
+        process::exit(1);
     }
 
     info!("Starting workers...");
